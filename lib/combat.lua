@@ -231,9 +231,9 @@ local lastSeenAnim = 0
 ---@param delaySoulsplit integer Delay from seeing the animation before going back to soulsplit, this should be larger than delay
 ---@param animCooldown integer Cooldown at which seeing the animation again would be considered a new attack (This is used as a backup and should be just longer than the animation's duration)
 function COMBAT.prayAgainstAnimation(mobId,animation,prayer,delayPrayer,delaySoulsplit,animCooldown)
-    local animationCooldown = animCooldown or 4000
     local soul = delaySoulsplit or 0
     local delay = delayPrayer or 0
+    local animationCooldown = animCooldown or (delay + soul + 600)
     local mobs = API.ReadAllObjectsArray({1},{mobId},{})
     if API.GetPray_() > 0 then
         for _ , mob in ipairs(mobs) do 
@@ -356,7 +356,6 @@ function COMBAT.doRotationNecro(shouldBloat)
     ------------------------------ GCD Stuff --------------------------------
 
     if TIMER:shouldRunStartsWith("GCD") and API.LocalPlayer_IsInCombat_() and (API.ReadTargetInfo(false).Hitpoints > 0 or (#API.ReadAllObjectsArray({1},{22454,},{}) > 0 and API.ReadTargetInfo(false).Cmb_lv > 0)) then
-        -- API.logDebug("[COMBAT] DeltaT: " .. os.clock() - lastAttackTime .. " s")
         lastAttackTime = os.clock()
         lastPlayerAnim = -1
         if API.Buffbar_GetIDstatus(30078).found then -- Living Death rotation
@@ -465,7 +464,7 @@ end
 ---@return boolean
 function COMBAT.barricade()
     local Barricade = API.GetABs_name1("Barricade")
-    if TIMER:shouldRun("GCD_BARRICADE") and (Barricade.id ~= 0 and Barricade.cooldown_timer < 1) then
+    if TIMER:shouldRun("GCD_BARRICADE") and (Barricade.id ~= 0 and Barricade.cooldown_timer < 1) and API.GetAddreline_() == 100 then
         API.logWarn("[COMBAT] Using Barricade")
         API.DoAction_Ability_Direct(Barricade, 1, API.OFF_ACT_GeneralInterface_route)
         TIMER:createSleep("GCD_BARRICADE",1500)
@@ -478,7 +477,7 @@ end
 ---@return boolean
 function COMBAT.devotion()
     local Devotion = API.GetABs_name1("Devotion")
-    if TIMER:shouldRun("GCD_DEVOTION") and (Devotion.id ~= 0 and Devotion.cooldown_timer < 1) then
+    if TIMER:shouldRun("GCD_DEVOTION") and (Devotion.id ~= 0 and Devotion.cooldown_timer < 1) and API.GetAddreline_() > 50 then
         API.logWarn("[COMBAT] Using Devotion")
         API.DoAction_Ability_Direct(Devotion, 1, API.OFF_ACT_GeneralInterface_route)
         TIMER:createSleep("GCD_DEVOTION",1500)
@@ -491,7 +490,7 @@ end
 ---@return boolean
 function COMBAT.reflect()
     local Reflect = API.GetABs_name1("Reflect")
-    if TIMER:shouldRun("GCD_REFLECT") and (Reflect.id ~= 0 and Reflect.cooldown_timer < 1) then
+    if TIMER:shouldRun("GCD_REFLECT") and (Reflect.id ~= 0 and Reflect.cooldown_timer < 1) and API.GetAddreline_() > 50 then
         API.logWarn("[COMBAT] Using Reflect")
         API.DoAction_Ability_Direct(Reflect, 1, API.OFF_ACT_GeneralInterface_route)
         TIMER:createSleep("GCD_REFLECT",1500)
@@ -504,7 +503,7 @@ end
 ---@return boolean
 function COMBAT.debilitate()
     local Debilitate = API.GetABs_name1("Debilitate")
-    if TIMER:shouldRun("GCD_DEBILITATE") and (Debilitate.id ~= 0 and Debilitate.cooldown_timer < 1) then
+    if TIMER:shouldRun("GCD_DEBILITATE") and (Debilitate.id ~= 0 and Debilitate.cooldown_timer < 1) and API.GetAddreline_() > 50 then
         API.logWarn("[COMBAT] Using Debilitate")
         API.DoAction_Ability_Direct(Debilitate, 1, API.OFF_ACT_GeneralInterface_route)
         TIMER:createSleep("GCD_DEBILITATE",1500)
@@ -517,7 +516,7 @@ end
 ---@return boolean
 function COMBAT.resonance()
     local Resonance = API.GetABs_name1("Resonance")
-    if TIMER:shouldRun("GCD_RESONANCE") and (Resonance.id ~= 0 and Resonance.cooldown_timer < 1) then
+    if not API.Buffbar_GetIDstatus(14222,false).found and TIMER:shouldRun("GCD_RESONANCE") and (Resonance.id ~= 0 and Resonance.cooldown_timer < 1) then
         API.logWarn("[COMBAT] Using Resonance")
         API.DoAction_Ability_Direct(Resonance, 1, API.OFF_ACT_GeneralInterface_route)
         TIMER:createSleep("GCD_RESONANCE",1500)
@@ -649,6 +648,14 @@ function COMBAT.maintainAgressionPot()
     else
         return true
     end
+end
+
+---Returns cooldown of an ability
+---@param ability string
+---@return number
+function COMBAT.abilityCooldown(ability)
+    local abil = API.GetABs_name(ability,true)
+    return abil.cooldown_timer
 end
 
 return COMBAT
