@@ -1,0 +1,90 @@
+local API = require("api")
+API.Write_LoopyLoop(true)
+API.SetDrawTrackedSkills(true)
+API.SetDrawLogs(true)
+Write_fake_mouse_do(false)
+API.SetMaxIdleTime(6)
+
+local function calculateDistance(tile1, tile2)
+  return math.sqrt((tile1.x - tile2.x)^2 + (tile1.y - tile2.y)^2)
+end
+
+local function calculateSquareDistance(tile1, tile2)
+  return math.max(math.abs(tile1.x - tile2.x), math.abs(tile1.y - tile2.y))
+end
+
+
+local function round(val, decimal)
+    if decimal then
+        return math.floor((val * 10 ^ decimal) + 0.5) / (10 ^ decimal)
+    else
+        return math.floor(val + 0.5)
+    end
+end
+
+local function formatNumber(num)
+    if num >= 1e6 then
+        return string.format("%.1fM", num / 1e6)
+    elseif num >= 1e3 then
+        return string.format("%.1fK", num / 1e3)
+    else
+        return tostring(num)
+    end
+end
+
+local function formatElapsedTime(startTime)
+    local currentTime = os.time()
+    local elapsedTime = currentTime - startTime
+    local hours = math.floor(elapsedTime / 3600)
+    local minutes = math.floor((elapsedTime % 3600) / 60)
+    local seconds = elapsedTime % 60
+    return string.format("[%02d:%02d:%02d]", hours, minutes, seconds)
+end
+
+local startTime = os.time()
+local startEnergy = API.InvItemcountStack_String("Incandescent energy") or 0
+local function drawGUI()
+    if API.InvItemcountStack_String("Incandescent energy") > 0 then
+        local currentEnergy = API.InvItemcountStack_String("Incandescent energy")
+        local elapsedMinutes = (os.time() - startTime) / 60
+        local diffEnergy = math.abs(currentEnergy - startEnergy);
+        local energyPH = round((diffEnergy * 60) / elapsedMinutes);
+        local time = formatElapsedTime(startTime)
+        IGP.string_value = time ..
+            " | Energy/h: " .. formatNumber(energyPH) ..
+            " | Energy: " .. diffEnergy
+    end
+    API.DrawProgressBar(IGP)
+end
+
+IGP = API.CreateIG_answer()
+IGP.box_start = FFPOINT.new(400, 5, 0)
+IGP.box_name = "PROGRESSBAR"
+IGP.colour = ImColor.new(116, 2, 179);
+IGP.string_value = "SIMPLE DIVINATION"
+
+while API.Read_LoopyLoop() do
+    drawGUI()
+    API.DoRandomEvents()
+    if API.InvItemcount_String("Spirit attraction potion") > 0 and not API.Buffbar_GetIDstatus(50859,false).found then -- Can also similarly add Extreme divination potions
+        API.DoAction_Inventory3("Spirit attraction potion",0,1,API.OFF_ACT_GeneralInterface_route)
+        API.RandomSleep2(1500,200,300)
+    end
+    if API.CheckAnim(80) then -- Extra long since it takes a while for the animation to start after clicking the spring
+        API.RandomSleep2(200,0,0)
+    elseif API.InvFull_() then -- Not efficient but with a dowser it only happens rarely when things go wrong
+    API.DoAction_Object_string1(0xc8,API.OFF_ACT_GeneralObject_route0,{ "Energy rift" },50,true)
+    API.RandomSleep2(8000,1000,2000)
+    else
+        local spring = API.ReadAllObjectsArray({1},{18195},{"Enriched"})[1]
+        local rift = API.ReadAllObjectsArray({12},{87306},{})[1]
+        if calculateSquareDistance(rift.Tile_XYZ,API.PlayerCoord()) > 2 then
+            API.DoAction_WalkerF(rift.Tile_XYZ)
+            API.RandomSleep2(1800,500,1000)
+        end
+        if spring ~= nil and rift ~= nil and calculateDistance(spring.Tile_XYZ,rift.Tile_XYZ) < 11 then
+            API.DoAction_NPC(0xc8,API.OFF_ACT_InteractNPC_route,{ 18195 },50)
+            API.RandomSleep2(1800,500,1000)
+        end
+    end
+end
