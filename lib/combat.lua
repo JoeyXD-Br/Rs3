@@ -1,5 +1,5 @@
 local API = require("api")
-local TIMER = require("timer")
+local TIMER = require("lib.timer")
 --local LOOTER = require("lib.looter")
 COMBAT = {}
 --local looter = LOOTER:new(500)
