@@ -29,7 +29,7 @@ end
 
   ---Surges if facing 0-360
 ---@param Orientation number
-function SurgeIfFacing(Orientation,timeout)
+local function SurgeIfFacing(Orientation,timeout)
     local timer = timeout or 0.1
     local function NormalizeOrientation(value)
         return value == 360 and 0 or value
@@ -110,16 +110,15 @@ function COMBAT.prayRanged()
     end
 end
 
-local prayedMelee = 0
 function COMBAT.prayMelee()
-    if API.GetPray_() > 0 and os.time() > prayedMelee + 1 then
+    if API.GetPray_() > 0 and TIMER:shouldRun("PRAYER_MELEE") then
         if API.GetABs_name1("Deflect Melee").enabled and not API.Buffbar_GetIDstatus(26040).found then
             API.DoAction_Ability("Deflect Melee", 1, API.OFF_ACT_GeneralInterface_route)
-            prayedMelee = os.time()
+            TIMER:createSleep("PRAYER_MELEE",700)
         end
         if API.GetABs_name1("Protect from Melee").enabled and not API.Buffbar_GetIDstatus(25961).found then
             API.DoAction_Ability("Protect from Melee", 1, API.OFF_ACT_GeneralInterface_route)
-            prayedMelee = os.time()
+            TIMER:createSleep("PRAYER_MELEE",700)
         end
     end
 end
@@ -578,66 +577,6 @@ function COMBAT.doRotationNecro()
         TIMER:createSleep("GCD",1700)
     end
 end
-
-
---- A rotation for when the boss is invulnerable or you just want to build stacks
-function  COMBAT.doFillerRotationNecro(attack,build)
-    local attack = attack or false
-    local build = build or false
-    local touch = API.GetABs_name1("Touch of Death")
-    local soulsap = API.GetABs_name1("Soul Sap")
-    local army = API.GetABs_name1("Conjure Undead Army")
-    local commandGhost = API.GetABs_name1("Command Vengeful Ghost")
-    local commandSkelly = API.GetABs_name1("Command Skeleton Warrior")
-    local auto = API.GetABs_name("Basic<nbsp>Attack",true)
-    local stormShards = API.GetABs_name1("Storm Shards")
-    local necrosis = API.Buffbar_GetIDstatus(30101,false).conv_text
-    local souls = API.Buffbar_GetIDstatus(30123,false).conv_text
-
-    local playerAnim = API.ReadPlayerAnim()
-    if NecroAnimations[playerAnim] and playerAnim ~= lastPlayerAnim then -- Attack was Executed
-        -- API.logDebug("[COMBAT] Attack Animation: " .. playerAnim .. " | DeltaT: " .. os.clock() - lastAttackTime .. " s")
-        -- lastAttackTime = os.clock()
-        lastPlayerAnim = playerAnim
-        TIMER:createSleep("GCD",1000)
-    elseif playerAnim == -1 then
-        lastPlayerAnim = -1
-    end
-
-    ------------------------------ GCD Stuff --------------------------------
-
-    if TIMER:shouldRunStartsWith("GCD") and API.LocalPlayer_IsInCombat_() and ((API.ReadTargetInfo(false).Hitpoints > 0 or (#API.ReadAllObjectsArray({1},{22454},{}) > 0 and API.ReadTargetInfo(false).Cmb_lv > 0) or not attack)) then
-        lastAttackTime = os.clock()
-        lastPlayerAnim = -1
-        if not (API.Buffbar_GetIDstatus(34177,false).found or API.Buffbar_GetIDstatus(34178,false).found or API.Buffbar_GetIDstatus(34179,false).found) and army.cooldown_timer < 2 and army.enabled then
-            API.logDebug("[COMBAT] Conjure Undead Army")
-            API.DoAction_Ability("Conjure Undead Army", 1, API.OFF_ACT_GeneralInterface_route,false)
-        elseif commandSkelly.cooldown_timer < 2 and commandSkelly.enabled then
-            API.logDebug("[COMBAT] Command Skeleton Warrior")
-            API.DoAction_Ability_Direct(commandSkelly, 1, API.OFF_ACT_GeneralInterface_route)
-        elseif commandGhost.cooldown_timer < 2 and commandGhost.enabled then
-            API.logDebug("[COMBAT] Command Vengeful Ghost")
-            API.DoAction_Ability_Direct(commandGhost, 1, API.OFF_ACT_GeneralInterface_route)
-        elseif attack and (necrosis < 12 or not build) and touch.cooldown_timer < 2 and touch.enabled then
-            API.logDebug("[COMBAT] Touch of Death")
-            API.DoAction_Ability_Direct(touch, 1, API.OFF_ACT_GeneralInterface_route)
-        elseif attack and (souls < 5 or not build) and soulsap.cooldown_timer < 2 and soulsap.enabled then
-            API.logDebug("[COMBAT] Soul Sap")
-            API.DoAction_Ability_Direct(soulsap, 1, API.OFF_ACT_GeneralInterface_route) 
-        elseif attack and stormShards.cooldown_timer < 2 and stormShards.enabled then
-                API.logDebug("[COMBAT] Storm Shards")
-                API.DoAction_Ability_Direct(stormShards, 1, API.OFF_ACT_GeneralInterface_route)
-        elseif attack and (not build or API.GetAddreline_() < 100) then
-            API.logDebug("[COMBAT] Auto Attack")
-            API.DoAction_Ability_Direct(auto, 1, API.OFF_ACT_GeneralInterface_route)
-        elseif attack and build then
-            COMBAT.reflect()
-        end
-        
-        TIMER:createSleep("GCD",1700)
-    end
-end
-
 ----------------------------------------------------- DEFENSIVES ----------------------------------------------------------
 
 
